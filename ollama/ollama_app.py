@@ -1,46 +1,108 @@
-import oolama
-import gradio as gr
+"""
+This module provides functionalities for processing input data and generating hypergraphs.
+"""
+
+import streamlit as st
+import ollama
+import os
+import json
+import time
 import hypernetx as hnx
+from transformers import AutoTokenizer, AutoModel
 
-def build_hypergraph(input_data):
-    tokens = oolama.tokenize(input_data)
-    entities = oolama.extract_entities(tokens)
-    relations = oolama.extract_relations(tokens)
+class Node:
+    """
+    Represents a node in the hypergraph.
+    """
+    def __init__(self, node_id, title, content, embedding=None):
+        self.id = node_id
+        self.title = title
+        self.content = content
+        self.embedding = embedding
 
-    hypergraph = hnx.Hypergraph()
-    for entity in entities:
-        hypergraph.add_node(entity)
-    for relation in relations:
-        hypergraph.add_edge(relation['entities'], relation['type'])
+class Hypergraph:
+    """
+    Represents a hypergraph with nodes and edges.
+    """
+    def __init__(self):
+        self.nodes = {}
+        self.edges = []
 
-    return hypergraph
+def process_input_data(input_data):
+    """
+    Process the input data to extract entities and relations, and create a hypergraph.
+
+    Args:
+        input_data (str): The input data to process.
+
+    Returns:
+        hnx.Hypergraph: The generated hypergraph.
+    """
+    try:
+        tokens = ollama.tokenize(input_data)
+        entities = ollama.extract_entities(tokens)
+        relations = ollama.extract_relations(tokens)
+
+        hypergraph = hnx.Hypergraph()
+        for entity in entities:
+            hypergraph.add_node(entity)
+        for relation in relations:
+            hypergraph.add_edge(relation['entities'], relation['type'])
+
+        return hypergraph
+    except ollama.OllamaError as e:
+        st.error(f"Error processing input data: {e}")
+        return None
 
 def infer_on_hypergraph(hypergraph):
-    oolama_input = hnx.convert_to_oolama_format(hypergraph)
-    results = oolama.infer(oolama_input)
-    return results
+    """
+    Perform inference on the given hypergraph.
+
+    Args:
+        hypergraph (hnx.Hypergraph): The hypergraph to perform inference on.
+
+    Returns:
+        dict: The inference results.
+    """
+    try:
+        ollama_input = hnx.convert_to_ollama_format(hypergraph)
+        results = ollama.infer(ollama_input)
+        return results
+    except ollama.OllamaError as e:
+        st.error(f"Error during inference: {e}")
+        return None
 
 def format_hypergraph_inference_results(results):
-    formatted_results = oolama.format_results(results)
-    return formatted_results
+    """
+    Format the inference results for display.
 
-def process_data(input_data):
-    hypergraph = build_hypergraph(input_data)
-    results = infer_on_hypergraph(hypergraph)
-    formatted_results = format_hypergraph_inference_results(results)
-    return formatted_results
+    Args:
+        results (dict): The inference results to format.
 
-def gradio_interface(input_data):
-    result = process_data(input_data)
-    return result
+    Returns:
+        str: The formatted results.
+    """
+    try:
+        formatted_results = "\n".join([f"{key}: {value}" for key, value in results.items()])
+        return formatted_results
+    except Exception as e:
+        st.error(f"Error formatting results: {e}")
+        return ""
 
-iface = gr.Interface(
-    fn=gradio_interface,
-    inputs="text",
-    outputs="text",
-    title="Aprimorador de Dados com Hipergrafos",
-    description="Utiliza oolama e hipergrafos para aprimorar os dados fornecidos."
-)
+def main():
+    """
+    Main function to run the Streamlit app.
+    """
+    st.title("Hypergraph Inference App")
 
-if _name_ == "_main_":
-    iface.launch()
+    input_data = st.text_area("Enter input data:")
+    if st.button("Process"):
+        hypergraph = process_input_data(input_data)
+        if hypergraph:
+            results = infer_on_hypergraph(hypergraph)
+            if results:
+                formatted_results = format_hypergraph_inference_results(results)
+                st.text_area("Inference Results:", formatted_results)
+
+if __name__ == "__main__":
+    main()
