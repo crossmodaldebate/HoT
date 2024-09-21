@@ -1,8 +1,31 @@
+import oolama
 import gradio as gr
+import hypernetx as hnx
 import groq
-import os
-import json
 import time
+import json
+
+def build_hypergraph(input_data):
+    tokens = oolama.tokenize(input_data)
+    entities = oolama.extract_entities(tokens)
+    relations = oolama.extract_relations(tokens)
+
+    hypergraph = hnx.Hypergraph()
+    for entity in entities:
+        hypergraph.add_node(entity)
+    for relation in relations:
+        hypergraph.add_edge(relation['entities'], relation['type'])
+
+    return hypergraph
+
+def infer_on_hypergraph(hypergraph):
+    oolama_input = hnx.convert_to_oolama_format(hypergraph)
+    results = oolama.infer(oolama_input)
+    return results
+
+def format_results(results):
+    formatted = oolama.format_results(results)
+    return formatted
 
 def make_api_call(client, messages, max_tokens, is_final_answer=False):
     for attempt in range(3):
@@ -21,7 +44,7 @@ def make_api_call(client, messages, max_tokens, is_final_answer=False):
                     return {"title": "Erro", "content": f"Falha ao gerar a resposta final após 3 tentativas. Erro: {str(e)}"}
                 else:
                     return {"title": "Erro", "content": f"Falha ao gerar a etapa após 3 tentativas. Erro: {str(e)}", "next_action": "resposta_final"}
-            time.sleep(1)  # Esperar 1 segundo antes de tentar novamente
+            time.sleep(1)
 
 def generate_response(client, prompt):
     messages = [
@@ -73,10 +96,7 @@ json
     thinking_time = end_time - start_time
     total_thinking_time += thinking_time
     
-    if final_data.get('title') == "Erro":
-        steps.append(("Resposta Final", final_data.get('content'), thinking_time))
-    else:
-        steps.append(("Resposta Final", final_data.get('content', 'Sem Conteúdo'), thinking_time))
+    steps.append(("Resposta Final", final_data.get('content', 'Sem Conteúdo'), thinking_time))
     
     return steps, total_thinking_time
 
@@ -147,5 +167,5 @@ with gr.Blocks() as demo:
     
     submit_btn.click(fn=main, inputs=[api_input, user_input], outputs=output_html)
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     demo.launch()
