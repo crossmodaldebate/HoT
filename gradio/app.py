@@ -167,5 +167,5 @@ with gr.Blocks() as demo:
     
     submit_btn.click(fn=main, inputs=[api_input, user_input], outputs=output_html)
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     demo.launch()
