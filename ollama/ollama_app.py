@@ -1,6 +1,5 @@
 import oolama
 import gradio as gr
-import torch
 import hypernetx as hnx
 
 def build_hypergraph(input_data):
@@ -43,5 +42,5 @@ iface = gr.Interface(
     description="Utiliza oolama e hipergrafos para aprimorar os dados fornecidos."
 )
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     iface.launch()
