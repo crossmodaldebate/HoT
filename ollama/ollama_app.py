@@ -17,25 +17,25 @@ def make_api_call(messages, max_tokens, is_final_answer=False):
         except Exception as e:
             if attempt == 2:
                 if is_final_answer:
-                    return {"title": "Error", "content": f"Failed to generate final answer after 3 attempts. Error: {str(e)}"}
+                    return {"title": "Erro", "content": f"Falha ao gerar a resposta final após 3 tentativas. Erro: {str(e)}"}
                 else:
-                    return {"title": "Error", "content": f"Failed to generate step after 3 attempts. Error: {str(e)}", "next_action": "final_answer"}
-            time.sleep(1)  # Wait for 1 second before retrying
+                    return {"title": "Erro", "content": f"Falha ao gerar etapa após 3 tentativas. Erro: {str(e)}", "next_action": "resposta_final"}
+            time.sleep(1)  # Espera por 1 segundo antes de tentar novamente
 
 def generate_response(prompt):
     messages = [
-        {"role": "system", "content": """You are an expert AI assistant that utilizes heuristic and hermeneutic methods with a hypergraph architecture. For each step, provide a title that describes what you're doing in that step, along with the content explaining your reasoning.
+        {"role": "system", "content": """Você é um assistente de IA especialista que utiliza métodos heurísticos e hermenêuticos com uma arquitetura em hipergrafo. Para cada etapa, forneça um título que descreva o objetivo da etapa e o conteúdo explicativo. Siga a estrutura de um hipergrafo para decompor o problema em nós e suas relações.
 
-Example of a valid JSON response:
+Exemplo de resposta JSON válida:
 json
 {
-    "title": "Identifying Key Nodes",
-    "content": "To begin solving this problem, we need to identify the key nodes and their relationships within the hypergraph. This involves...",
-    "next_action": "continue"
+    "title": "Identificação de Nós Principais",
+    "content": "Para começar a resolver este problema, precisamos identificar os nós principais e suas relações dentro do hipergrafo. Isso envolve...",
+    "next_action": "continuar"
 }
 """},
         {"role": "user", "content": prompt},
-        {"role": "assistant", "content": "Thank you! I will now think step by step following my instructions, starting at the beginning after decomposing the problem into a hypergraph architecture."}
+        {"role": "assistant", "content": "Obrigado! Vou começar a pensar passo a passo seguindo minhas instruções, iniciando pela decomposição do problema em uma arquitetura de hipergrafo."}
     ]
     
     steps = []
@@ -49,20 +49,20 @@ json
         thinking_time = end_time - start_time
         total_thinking_time += thinking_time
         
-        steps.append((f"Step {step_count}: {step_data['title']}", step_data['content'], thinking_time))
+        steps.append((f"Etapa {step_count}: {step_data['title']}", step_data['content'], thinking_time))
         
         messages.append({"role": "assistant", "content": json.dumps(step_data)})
         
-        if step_data['next_action'] == 'final_answer' or step_count > 25: # Maximum of 25 steps to prevent infinite thinking time. Can be adjusted.
+        if step_data['next_action'] == 'resposta_final' or step_count > 25:  # Máximo de 25 etapas para evitar tempo de pensamento infinito. Pode ser ajustado.
             break
         
         step_count += 1
 
-        # Yield after each step for Streamlit to update
-        yield steps, None  # We're not yielding the total time until the end
+        # Yield após cada etapa para o Streamlit atualizar
+        yield steps, None  # Não estamos retornando o tempo total até o final
 
-    # Generate final answer
-    messages.append({"role": "user", "content": "Please provide the final answer based on your reasoning above."})
+    # Gerar resposta final
+    messages.append({"role": "user", "content": "Por favor, forneça a resposta final com base no seu raciocínio acima."})
     
     start_time = time.time()
     final_data = make_api_call(messages, 200, is_final_answer=True)
@@ -70,45 +70,45 @@ json
     thinking_time = end_time - start_time
     total_thinking_time += thinking_time
     
-    steps.append(("Final Answer", final_data['content'], thinking_time))
+    steps.append(("Resposta Final", final_data['content'], thinking_time))
 
     yield steps, total_thinking_time
 
 def main():
-    st.set_page_config(page_title="g1 prototype", page_icon="🧠", layout="wide")
+    st.set_page_config(page_title="g1 protótipo", page_icon="🧠", layout="wide")
     
-    st.title("g1: Using Llama-3.1 70b on Ollama to create o1-like reasoning chains with Hypergraph Architecture")
+    st.title("g1: Usando Llama-3.1 70b no Ollama para criar cadeias de raciocínio semelhantes ao o1 com Arquitetura de Hipergrafo")
     
     st.markdown("""
-    This is an early prototype of using heuristic and hermeneutic methods with a hypergraph architecture to improve output accuracy. It is not perfect and accuracy has yet to be formally evaluated. It is powered by Ollama and Llama-3.1 70b.
-                
-    Open source [repository here](https://github.com/bklieger-groq)
+    Este é um protótipo inicial de uso de métodos heurísticos e hermenêuticos com uma arquitetura em hipergrafo para melhorar a precisão de saída. Não é perfeito e a precisão ainda não foi formalmente avaliada. 
+
+    Repositório open source [aqui](https://github.com/bklieger-groq)
     """)
     
-    # Text input for user query
-    user_query = st.text_input("Enter your query:", placeholder="e.g., How many 'R's are in the word strawberry?")
+    # Entrada de texto para consulta do usuário
+    user_query = st.text_input("Digite sua consulta:", placeholder="ex: Quantos 'R's há na palavra morango?")
     
     if user_query:
-        st.write("Generating response...")
+        st.write("Gerando resposta...")
         
-        # Create empty elements to hold the generated text and total time
+        # Criar elementos vazios para armazenar o texto gerado e o tempo total
         response_container = st.empty()
         time_container = st.empty()
         
-        # Generate and display the response
+        # Gerar e exibir a resposta
         for steps, total_thinking_time in generate_response(user_query):
             with response_container.container():
                 for i, (title, content, thinking_time) in enumerate(steps):
-                    if title.startswith("Final Answer"):
+                    if title.startswith("Resposta Final"):
                         st.markdown(f"### {title}")
                         st.markdown(content.replace('\n', '<br>'), unsafe_allow_html=True)
                     else:
                         with st.expander(title, expanded=True):
                             st.markdown(content.replace('\n', '<br>'), unsafe_allow_html=True)
             
-            # Only show total time when it's available at the end
+            # Mostrar o tempo total apenas quando estiver disponível no final
             if total_thinking_time is not None:
-                time_container.markdown(f"*Total thinking time: {total_thinking_time:.2f} seconds*")
+                time_container.markdown(f"Tempo total de pensamento: {total_thinking_time:.2f} segundos")
 
 if _name_ == "_main_":
     main()
