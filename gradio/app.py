@@ -1,83 +1,23 @@
-import streamlit as st
-import groq
-import hypernetx as hnx
-import oolama
+import gradio as gr
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
+import ollama
 
-def process_input_data(input_data):
-    """
-    Process the input data to extract entities and relations, and create a hypergraph.
+# Load the local LLaMA model using ollama
+tokenizer = AutoTokenizer.from_pretrained("path_to_local_llama_model")
+model = AutoModelForCausalLM.from_pretrained("path_to_local_llama_model")
 
-    Args:
-        input_data (str): The input data to process.
+def generate_text(prompt):
+    inputs = tokenizer(prompt, return_tensors="pt")
+    outputs = model.generate(**inputs, max_new_tokens=50)
+    text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return text
 
-    Returns:
-        hnx.Hypergraph: The generated hypergraph.
-    """
-    try:
-        tokens = oolama.tokenize(input_data)
-        entities = oolama.extract_entities(tokens)
-        relations = oolama.extract_relations(tokens)
+iface = gr.Interface(
+    fn=generate_text,
+    inputs=gr.Textbox(lines=2, placeholder="Digite seu prompt aqui..."),
+    outputs="text",
+    title="Gerador de Texto com LLaMA",
+)
 
-        hypergraph = hnx.Hypergraph()
-        for entity in entities:
-            hypergraph.add_node(entity)
-        for relation in relations:
-            hypergraph.add_edge(relation['entities'], relation['type'])
-
-        return hypergraph
-    except oolama.OolamaError as e:
-        st.error(f"Error processing input data: {e}")
-        return None
-
-def infer_on_hypergraph(hypergraph):
-    """
-    Perform inference on the given hypergraph.
-
-    Args:
-        hypergraph (hnx.Hypergraph): The hypergraph to perform inference on.
-
-    Returns:
-        dict: The inference results.
-    """
-    try:
-        oolama_input = hnx.convert_to_oolama_format(hypergraph)
-        results = oolama.infer(oolama_input)
-        return results
-    except oolama.OolamaError as e:
-        st.error(f"Error during inference: {e}")
-        return None
-
-def format_hypergraph_inference_results(results):
-    """
-    Format the inference results for display.
-
-    Args:
-        results (dict): The inference results to format.
-
-    Returns:
-        str: The formatted results.
-    """
-    try:
-        formatted_results = "\n".join([f"{key}: {value}" for key, value in results.items()])
-        return formatted_results
-    except Exception as e:
-        st.error(f"Error formatting results: {e}")
-        return ""
-
-def main():
-    """
-    Main function to run the Streamlit app.
-    """
-    st.title("Hypergraph Inference App")
-
-    input_data = st.text_area("Enter input data:")
-    if st.button("Process"):
-        hypergraph = process_input_data(input_data)
-        if hypergraph:
-            results = infer_on_hypergraph(hypergraph)
-            if results:
-                formatted_results = format_hypergraph_inference_results(results)
-                st.text_area("Inference Results:", formatted_results)
-
-if __name__ == "__main__":
-    main()
+iface.launch()

@@ -1,87 +1,56 @@
-"""
-This module provides functionalities for processing input data and generating hypergraphs.
-"""
+import gradio as gr
+import networkx as nx
+import matplotlib.pyplot as plt
+from ollama import Ollama
 
-import streamlit as st
-import groq
-import hypernetx as hnx
-import oolama
+# Initialize the LLaMA model
+ollama = Ollama(model_path="path/to/llama-3.1.GGUF")
 
-def process_input_data(input_data):
-    """
-    Process the input data to extract entities and relations, and create a hypergraph.
+def generate_text(prompt):
+    response = ollama.generate(prompt, max_tokens=50)
+    return response['text']
 
-    Args:
-        input_data (str): The input data to process.
+def create_directional_graph():
+    # Create a directed graph
+    G = nx.DiGraph()
 
-    Returns:
-        hnx.Hypergraph: The generated hypergraph.
-    """
-    try:
-        tokens = oolama.tokenize(input_data)
-        entities = oolama.extract_entities(tokens)
-        relations = oolama.extract_relations(tokens)
+    # Add nodes
+    G.add_node(1)
+    G.add_node(2)
+    G.add_node(3)
+    G.add_node(4)
 
-        hypergraph = hnx.Hypergraph()
-        for entity in entities:
-            hypergraph.add_node(entity)
-        for relation in relations:
-            hypergraph.add_edge(relation['entities'], relation['type'])
+    # Add edges
+    G.add_edge(1, 2)
+    G.add_edge(2, 3)
+    G.add_edge(3, 4)
+    G.add_edge(4, 1)
 
-        return hypergraph
-    except oolama.OolamaError as e:
-        st.error(f"Error processing input data: {e}")
-        return None
+    return G
 
-def infer_on_hypergraph(hypergraph):
-    """
-    Perform inference on the given hypergraph.
+def visualize_graph(G):
+    # Draw the graph
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, with_labels=True, node_color='skyblue', node_size=2000, edge_color='gray', arrows=True)
+    plt.title('Directional Graph')
+    plt.show()
 
-    Args:
-        hypergraph (hnx.Hypergraph): The hypergraph to perform inference on.
+def main(prompt):
+    # Generate text
+    generated_text = generate_text(prompt)
+    
+    # Create and visualize the directional graph
+    G = create_directional_graph()
+    visualize_graph(G)
+    
+    return generated_text
 
-    Returns:
-        dict: The inference results.
-    """
-    try:
-        oolama_input = hnx.convert_to_oolama_format(hypergraph)
-        results = oolama.infer(oolama_input)
-        return results
-    except oolama.OolamaError as e:
-        st.error(f"Error during inference: {e}")
-        return None
-
-def format_hypergraph_inference_results(results):
-    """
-    Format the inference results for display.
-
-    Args:
-        results (dict): The inference results to format.
-
-    Returns:
-        str: The formatted results.
-    """
-    try:
-        formatted_results = "\n".join([f"{key}: {value}" for key, value in results.items()])
-        return formatted_results
-    except Exception as e:
-        st.error(f"Error formatting results: {e}")
-        return ""
-
-def main():
-    """
-    Main function to run the Streamlit app.
-    """
-    st.title("Hypergraph Inference App")
-
-    input_data = st.text_area("Enter input data:")
-    if st.button("Process"):
-        hypergraph = process_input_data(input_data)
-        if hypergraph:
-            results = infer_on_hypergraph(hypergraph)
-            if results:
-                formatted_results = format_hypergraph_inference_results(results)
-                st.text_area("Inference Results:", formatted_results)
+iface = gr.Interface(
+    fn=main,
+    inputs=gr.Textbox(lines=2, placeholder="Digite seu prompt aqui..."),
+    outputs="text",
+    title="Gerador de Texto com LLaMA e Visualização de Grafo Direcional",
+)
 
 if __name__ == "__main__":
-    main()
+    iface.launch()
