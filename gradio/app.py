@@ -1,23 +1,43 @@
+import networkx as nx
+import matplotlib.pyplot as plt
 import gradio as gr
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
-import ollama
 
-# Load the local LLaMA model using ollama
-tokenizer = AutoTokenizer.from_pretrained("path_to_local_llama_model")
-model = AutoModelForCausalLM.from_pretrained("path_to_local_llama_model")
+# Definir as variáveis como nós do grafo
+nodes = [
+    "Number of Open-Source LLM Projects",
+    "Cost of Cloud-Based LLM APIs",
+    "Number of LLM-based Applications",
+    "User Expertise Required for LLM Deployment",
+    "Public Awareness of LLMs"
+]
 
-def generate_text(prompt):
-    inputs = tokenizer(prompt, return_tensors="pt")
-    outputs = model.generate(**inputs, max_new_tokens=50)
-    text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return text
+# Definir as arestas do grafo com base nas relações causais
+edges = [
+    ("Number of Open-Source LLM Projects", "Number of LLM-based Applications"),
+    # Adicione outras arestas conforme necessário
+]
 
-iface = gr.Interface(
-    fn=generate_text,
-    inputs=gr.Textbox(lines=2, placeholder="Digite seu prompt aqui..."),
-    outputs="text",
-    title="Gerador de Texto com LLaMA",
-)
+# Função para criar e desenhar o grafo
+def draw_graph():
+    # Criar o grafo direcionado
+    G = nx.DiGraph()
+    
+    # Adicionar nós ao grafo
+    G.add_nodes_from(nodes)
+    
+    # Adicionar arestas ao grafo
+    G.add_edges_from(edges)
+    
+    # Desenhar o grafo
+    pos = nx.spring_layout(G)
+    plt.figure(figsize=(10, 6))
+    nx.draw(G, pos, with_labels=True, node_size=3000, node_color='lightblue', font_size=10, font_weight='bold', arrows=True)
+    plt.title("Directed Graph of LLM Variables")
+    plt.show()
 
-iface.launch()
+# Interface Gradio
+iface = gr.Interface(fn=draw_graph, inputs=[], outputs="plot")
+
+# Executar a interface
+if __name__ == "__main__":
+    iface.launch()

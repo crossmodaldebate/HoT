@@ -1,56 +1,32 @@
-import gradio as gr
 import networkx as nx
 import matplotlib.pyplot as plt
-from ollama import Ollama
 
-# Initialize the LLaMA model
-ollama = Ollama(model_path="path/to/llama-3.1.GGUF")
+# Definir as variáveis como nós do grafo
+nodes = [
+    "Number of Open-Source LLM Projects",
+    "Cost of Cloud-Based LLM APIs",
+    "Number of LLM-based Applications",
+    "User Expertise Required for LLM Deployment",
+    "Public Awareness of LLMs"
+]
 
-def generate_text(prompt):
-    response = ollama.generate(prompt, max_tokens=50)
-    return response['text']
+# Definir as arestas do grafo com base nas relações causais
+edges = [
+    ("Number of Open-Source LLM Projects", "Number of LLM-based Applications"),
+    # Adicione outras arestas conforme necessário
+]
 
-def create_directional_graph():
-    # Create a directed graph
-    G = nx.DiGraph()
+# Criar o grafo direcionado
+G = nx.DiGraph()
 
-    # Add nodes
-    G.add_node(1)
-    G.add_node(2)
-    G.add_node(3)
-    G.add_node(4)
+# Adicionar nós ao grafo
+G.add_nodes_from(nodes)
 
-    # Add edges
-    G.add_edge(1, 2)
-    G.add_edge(2, 3)
-    G.add_edge(3, 4)
-    G.add_edge(4, 1)
+# Adicionar arestas ao grafo
+G.add_edges_from(edges)
 
-    return G
-
-def visualize_graph(G):
-    # Draw the graph
-    pos = nx.spring_layout(G)
-    nx.draw(G, pos, with_labels=True, node_color='skyblue', node_size=2000, edge_color='gray', arrows=True)
-    plt.title('Directional Graph')
-    plt.show()
-
-def main(prompt):
-    # Generate text
-    generated_text = generate_text(prompt)
-    
-    # Create and visualize the directional graph
-    G = create_directional_graph()
-    visualize_graph(G)
-    
-    return generated_text
-
-iface = gr.Interface(
-    fn=main,
-    inputs=gr.Textbox(lines=2, placeholder="Digite seu prompt aqui..."),
-    outputs="text",
-    title="Gerador de Texto com LLaMA e Visualização de Grafo Direcional",
-)
-
-if __name__ == "__main__":
-    iface.launch()
+# Desenhar o grafo
+pos = nx.spring_layout(G)
+nx.draw(G, pos, with_labels=True, node_size=3000, node_color='lightblue', font_size=10, font_weight='bold', arrows=True)
+plt.title("Directed Graph of LLM Variables")
+plt.show()
