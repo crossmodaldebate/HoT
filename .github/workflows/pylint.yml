@@ -1,23 +1,30 @@
-name: Pylint
+function Format-Results {
+  param(
+    [hashtable]$results
+  )
 
-on: [push]
+  try {
+    $formattedResults = ($results.GetEnumerator() | ForEach-Object {
+      "{0}: {1}" -f $_.Key, $_.Value
+    }) -join "`n"
+    return $formattedResults
+  }
+  catch [System.Collections.Generic.KeyNotFoundException] {
+    Write-Error "Erro de chave nos resultados: $($_.Exception.Message)"
+    return ""
+  }
+  catch [System.Management.Automation.RuntimeException] {
+    Write-Error "Erro de tipo nos resultados: $($_.Exception.Message)"
+    return ""
+  }
+}
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.8", "3.9", "3.10"]
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pylint
-    - name: Analysing the code with pylint
-      run: |
-        pylint $(git ls-files '*.py')
+# Exemplo de uso:
+$resultados = @{
+  Nome = "João";
+  Idade = 30;
+  Cidade = "São Paulo"
+}
+
+$textoFormatado = Format-Results -results $resultados
+Write-Host $textoFormatado 
